@@ -13,10 +13,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 # Setting up the project name and version
-project(CMakeStarterProject
-        VERSION 3.0.0
-        DESCRIPTION "A Simple C++ Starter Project Using CMake"
-        HOMEPAGE_URL "https://github.com/thiago-rezende/cmake-starter-project"
+project(DistributedSystemsMiddleware
+        VERSION 1.0.0
+        DESCRIPTION "Simple implementation of a middleware system"
+        HOMEPAGE_URL "https://github.com/thiago-rezende/distributed-systems-middleware"
         LANGUAGES CXX)
 
 # Add the cmake folder so the modules path
@@ -57,10 +57,10 @@ add_subdirectory(${VENDOR}/spdlog)
 option(USE_MSVC_DYNAMIC_LINKED_RUNTIME "Uses MSVC dynamic linked runtime" OFF)
 
 # Generate an config.h file based on config.in file
-configure_file(${CMAKE_SOURCE_DIR}/application/config.in ${CMAKE_SOURCE_DIR}/application/config.h @ONLY NEWLINE_STYLE LF)
+configure_file(${CMAKE_SOURCE_DIR}/middleware/config.in ${CMAKE_SOURCE_DIR}/middleware/config.h @ONLY NEWLINE_STYLE LF)
 
 # Setting the project folders
-add_subdirectory(application)
+add_subdirectory(middleware)
 
 # Adding docs generation
 add_subdirectory(docs)
@@ -74,12 +74,12 @@ if(MSVC)
     ## Enable folders
     set_property(GLOBAL PROPERTY USE_FOLDERS ON)
     ## Application
-    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT application)
-    set_property(TARGET application PROPERTY FOLDER "Application")
+    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT middleware)
+    set_property(TARGET middleware PROPERTY FOLDER "Middleware")
     ## Utils
-    set_property(TARGET copy_resources_application PROPERTY FOLDER "Utils")
+    set_property(TARGET copy_resources_middleware PROPERTY FOLDER "Utils")
     ## Tests
-    set_property(TARGET application_tests PROPERTY FOLDER "Tests")
+    set_property(TARGET middleware_tests PROPERTY FOLDER "Tests")
     ## Vendor
     # Google Test
     set_property(TARGET Catch2 PROPERTY FOLDER "Vendor/Catch2")

@@ -1,22 +1,22 @@
 # Find Doxigen and require dot, treat the other components as optional
 find_package(Doxygen)
-option(APPLICATION_BUILD_DOCUMENTATION "Build application documentation (requires Doxygen)" ${DOXYGEN_FOUND})
+option(MIDDLEWARE_BUILD_DOCUMENTATION "Build middleware documentation (requires Doxygen)" ${DOXYGEN_FOUND})
 
 
-if(APPLICATION_BUILD_DOCUMENTATION)
+if(MIDDLEWARE_BUILD_DOCUMENTATION)
     if(NOT DOXYGEN_FOUND)
         message(FATAL_ERROR "Doxygen is needed to build the documentation.")
     endif()
 
     # Find all the public headers
-    get_target_property(APPLICATION_PUBLIC_HEADER_DIR application INTERFACE_INCLUDE_DIRECTORIES)
-    file(GLOB_RECURSE APPLICATION_PUBLIC_HEADERS
-        ${APPLICATION_PUBLIC_HEADER_DIR}/*.h
-        ${APPLICATION_PUBLIC_HEADER_DIR}/*.hpp
+    get_target_property(MIDDLEWARE_PUBLIC_HEADER_DIR middleware INTERFACE_INCLUDE_DIRECTORIES)
+    file(GLOB_RECURSE MIDDLEWARE_PUBLIC_HEADERS
+        ${MIDDLEWARE_PUBLIC_HEADER_DIR}/*.h
+        ${MIDDLEWARE_PUBLIC_HEADER_DIR}/*.hpp
     )
 
     # This will be the main output of our command
-    set(DOXYGEN_INPUT_DIR ${PROJECT_SOURCE_DIR}/application)
+    set(DOXYGEN_INPUT_DIR ${PROJECT_SOURCE_DIR}/middleware)
     set(DOXYGEN_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/docs/doxygen)
     set(DOXYGEN_INDEX_FILE ${DOXYGEN_OUTPUT_DIR}/html/index.html)
     set(DOXYFILE_IN ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
@@ -32,7 +32,7 @@ if(APPLICATION_BUILD_DOCUMENTATION)
 
     file(MAKE_DIRECTORY ${DOXYGEN_OUTPUT_DIR}) # Doxygen won't create this for us
     add_custom_command(OUTPUT ${DOXYGEN_INDEX_FILE}
-                    DEPENDS ${APPLICATION_PUBLIC_HEADERS}
+                    DEPENDS ${MIDDLEWARE_PUBLIC_HEADERS}
                     COMMAND ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
                     MAIN_DEPENDENCY ${DOXYFILE_OUT} ${DOXYFILE_IN}
                     COMMENT "Generating docs")

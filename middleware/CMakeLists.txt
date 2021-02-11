@@ -1,10 +1,10 @@
 # Include dirs
-set(APPLICATION_INCLUDE_DIRS
+set(MIDDLEWARE_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 # Header files
-set(APPLICATION_HEADERS
+set(MIDDLEWARE_HEADERS
     "pch.h"
     "core/logger.h"
     "debug/assert.h"
@@ -12,30 +12,30 @@ set(APPLICATION_HEADERS
 )
 
 # Source files
-set(APPLICATION_SOURCES
+set(MIDDLEWARE_SOURCES
     "main.cpp"
     "core/logger.cpp"
 )
 
 # Application executable
-add_executable(application ${APPLICATION_SOURCES})
+add_executable(middleware ${MIDDLEWARE_SOURCES})
 
 # Check for MSVC
 if(MSVC)
     # Check for dynamic runtime
     if(USE_MSVC_DYNAMIC_LINKED_RUNTIME)
-        set_target_properties(application PROPERTIES
+        set_target_properties(middleware PROPERTIES
             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
         )
     else()
-        set_target_properties(application PROPERTIES
+        set_target_properties(middleware PROPERTIES
             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
         )
     endif()
 endif()
 
 # Definitions
-target_compile_definitions(application
+target_compile_definitions(middleware
 PUBLIC
     # Debug Build
     $<$<CONFIG:Debug>:DEBUG>
@@ -52,35 +52,35 @@ PUBLIC
 )
 
 # Setting the pre compiled header
-target_precompile_headers(application PUBLIC
+target_precompile_headers(middleware PUBLIC
     "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/pch.hpp>"
 )
 
 # Application properties
-set_target_properties(application
+set_target_properties(middleware
 PROPERTIES
     CXX_STANDARD 17
     CXX_STANDARD_REQUIRED 17
 )
 
 # Applicaiton include dirs
-target_include_directories(application
+target_include_directories(middleware
 PUBLIC
-    ${APPLICATION_INCLUDE_DIRS}
+    ${MIDDLEWARE_INCLUDE_DIRS}
 )
 
 # Application libraries
-target_link_libraries(application
+target_link_libraries(middleware
 PUBLIC
     spdlog::spdlog_header_only
 )
 
 # Setting custom commandos to copy all needed files to the right location
-add_custom_target(copy_resources_application ALL
+add_custom_target(copy_resources_middleware ALL
     COMMAND cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/bin/assets
     COMMAND cmake -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/assets ${CMAKE_SOURCE_DIR}/bin/assets
-    DEPENDS application)
+    DEPENDS middleware)
 
 # Setting the install command to the app
-install(TARGETS application RUNTIME DESTINATION bin)
-install(TARGETS application LIBRARY DESTINATION lib)
+install(TARGETS middleware RUNTIME DESTINATION bin)
+install(TARGETS middleware LIBRARY DESTINATION lib)
