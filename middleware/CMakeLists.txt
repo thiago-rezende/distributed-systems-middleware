@@ -8,6 +8,7 @@ set(MIDDLEWARE_INCLUDE_DIRS
 # Header files
 set(MIDDLEWARE_HEADERS
     "pch.h"
+    "middleware.hpp"
     "core/logger.h"
     "debug/assert.h"
     "debug/instrumentor.h"
