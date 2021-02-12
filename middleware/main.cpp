@@ -39,12 +39,39 @@ int main(int argc, char **argv)
         /* Initialize Logger */
         Horus::Logger::init();
 
+        /* Middleware Instance */
         Middleware middleware;
 
+        /* Start middleware on given port */
         middleware.run(port);
 
-        std::cin.get();
+        /* Interaction */
+        bool done = false;
+        std::string input;
 
+        std::string header = "Distributed Systems Middleware [v1.0.0]\n"
+                             "type 'help' to see the commands list\n";
+
+        std::string help = "\n[command]   - [description]\n"
+                           "quit         - close all connections and quit\n"
+                           "help         - show this help message\n";
+
+        std::cout << header << std::endl;
+
+        while (!done)
+        {
+            std::cout << ">>> ";
+            std::getline(std::cin, input);
+
+            if (input == "quit")
+                done = true;
+            else if (input == "help")
+                std::cout << help << std::endl;
+            else
+                std::cout << "\n!> unrecognized command\ntype 'help' to see the commands list\n " << std::endl;
+        }
+
+        /* Terminate middleware */
         middleware.stop();
     }
 
