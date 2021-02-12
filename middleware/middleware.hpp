@@ -375,11 +375,14 @@ void Middleware::on_agent_ready(con_hdl_t handle, nlohmann::json payload)
 
     con_metadata_t::ptr metadata = m_agents_metadata[guid];
 
-    if (!metadata || metadata->status != "open")
+    if (!metadata)
     {
         H_ERROR("[AGENT] [READY] [NOT_AUTHORIZED] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
         return;
     }
+
+    if (metadata->status != "open")
+        return;
 
     metadata->status = "ready";
     metadata->state = state;
