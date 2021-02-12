@@ -52,7 +52,7 @@ int main(int argc, char **argv)
         std::string header = "Distributed Systems Middleware [v1.0.0]\n"
                              "type 'help' to see the commands list\n";
 
-        std::string help = "\n[command]   - [description]\n"
+        std::string help = "\n[command]    - [description]\n"
                            "quit         - close all connections and quit\n"
                            "help         - show this help message\n";
 

@@ -49,10 +49,15 @@ set(VENDOR ${CMAKE_SOURCE_DIR}/vendor)
 # Spdlog options
 option(SPDLOG_ENABLE_PCH "Build static or shared library using precompiled header to speed up compilation time" ON)
 
+# JSON options
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_Install OFF CACHE INTERNAL "")
+
 # Adding the vendor libs directories
 add_subdirectory(${VENDOR}/catch2)
 add_subdirectory(${VENDOR}/spdlog)
 add_subdirectory(${VENDOR}/clipp)
+add_subdirectory(${VENDOR}/json)
 
 # Using Header Only
 # add_subdirectory(${VENDOR}/websocketpp)

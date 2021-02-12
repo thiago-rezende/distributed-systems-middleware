@@ -88,6 +88,7 @@ target_link_libraries(middleware
 PUBLIC
     spdlog::spdlog_header_only
     clipp::clipp
+    nlohmann_json::nlohmann_json
 )
 
 # Setting custom commandos to copy all needed files to the right location
