@@ -11,3 +11,6 @@
 [submodule "vendor/asio"]
 	path = vendor/asio
 	url = https://github.com/chriskohlhoff/asio.git
+[submodule "vendor/clipp"]
+	path = vendor/clipp
+	url = https://github.com/muellan/clipp.git

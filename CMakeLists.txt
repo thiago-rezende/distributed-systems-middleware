@@ -52,6 +52,7 @@ option(SPDLOG_ENABLE_PCH "Build static or shared library using precompiled heade
 # Adding the vendor libs directories
 add_subdirectory(${VENDOR}/catch2)
 add_subdirectory(${VENDOR}/spdlog)
+add_subdirectory(${VENDOR}/clipp)
 
 # Using Header Only
 # add_subdirectory(${VENDOR}/websocketpp)

@@ -86,6 +86,7 @@ PUBLIC
 target_link_libraries(middleware
 PUBLIC
     spdlog::spdlog_header_only
+    clipp::clipp
 )
 
 # Setting custom commandos to copy all needed files to the right location
