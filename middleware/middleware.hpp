@@ -11,9 +11,32 @@
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 
+/* JSON parser */
+#include <nlohmann/json.hpp>
+
 /* Server type shortcut */
 typedef websocketpp::server<websocketpp::config::asio> server_t;
-typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_set_t;
+typedef websocketpp::connection_hdl con_hdl_t;
+typedef std::set<con_hdl_t, std::owner_less<con_hdl_t>> con_set_t;
+/* Connection Metadata */
+class con_metadata_t
+{
+public:
+    typedef std::shared_ptr<con_metadata_t> ptr;
+
+    con_metadata_t(std::string status, bool state, std::string name, uint32_t guid, con_hdl_t handle)
+        : status(status), state(state), name(name), guid(guid), handle(handle)
+    {
+    }
+
+    std::string status;
+    bool state;
+    std::string name;
+    con_hdl_t handle;
+    uint32_t guid;
+};
+
+typedef std::map<uint32_t, con_metadata_t::ptr> con_metadata_map_t;
 
 class Middleware
 {
@@ -26,16 +49,30 @@ public:
     void stop();
 
     /* Validation Handler */
-    bool validate(websocketpp::connection_hdl handle);
+    bool validate(con_hdl_t handle);
 
     /* Connection Open Handler */
-    void on_open(websocketpp::connection_hdl handle);
+    void on_open(con_hdl_t handle);
 
     /* Connection Close Handler */
-    void on_close(websocketpp::connection_hdl handle);
+    void on_close(con_hdl_t handle);
 
     /* Message Handler */
-    void on_message(websocketpp::connection_hdl handle, server_t::message_ptr message);
+    void on_message(con_hdl_t handle, server_t::message_ptr message);
+
+    /* Auth Message Type */
+    void on_client_auth(con_hdl_t handle, std::string payload);
+    void on_agent_auth(con_hdl_t handle, std::string payload);
+
+    /* Ready Message Type */
+    void on_client_ready(con_hdl_t handle, std::string payload);
+    void on_agent_ready(con_hdl_t handle, std::string payload);
+
+    /* Client Message Handler */
+    void handle_client_message(std::string message_type, con_hdl_t handle, std::string payload);
+
+    /* Agent Message Handler */
+    void handle_agent_message(std::string message_type, con_hdl_t handle, std::string payload);
 
 private:
     /* Server Instance */
@@ -48,6 +85,11 @@ private:
     con_set_t m_connections;
     con_set_t m_clients;
     con_set_t m_agents;
+    con_metadata_map_t m_clients_metadata;
+    con_metadata_map_t m_agents_metadata;
+
+    /* Connection GUID */
+    uint32_t m_next_guid = 0;
 
     /* Server Port */
     uint16_t m_port = 9002;
@@ -122,7 +164,7 @@ void Middleware::stop()
 }
 
 /* Validation Handler */
-bool Middleware::validate(websocketpp::connection_hdl handle)
+bool Middleware::validate(con_hdl_t handle)
 {
     H_PROFILE_FUNCTION();
 
@@ -143,7 +185,7 @@ bool Middleware::validate(websocketpp::connection_hdl handle)
 }
 
 /* Connection Open Handler */
-void Middleware::on_open(websocketpp::connection_hdl handle)
+void Middleware::on_open(con_hdl_t handle)
 {
     H_PROFILE_FUNCTION();
 
@@ -161,7 +203,7 @@ void Middleware::on_open(websocketpp::connection_hdl handle)
 }
 
 /* Connection Close Handler */
-void Middleware::on_close(websocketpp::connection_hdl handle)
+void Middleware::on_close(con_hdl_t handle)
 {
     H_PROFILE_FUNCTION();
 
@@ -179,23 +221,159 @@ void Middleware::on_close(websocketpp::connection_hdl handle)
 }
 
 /* Message Handler */
-void Middleware::on_message(websocketpp::connection_hdl handle, server_t::message_ptr message)
+void Middleware::on_message(con_hdl_t handle, server_t::message_ptr message)
 {
     H_PROFILE_FUNCTION();
 
     server_t::connection_ptr con = m_server.get_con_from_hdl(handle);
     std::string res = con->get_resource();
 
-    con_set_t::iterator con_it;
+    // con_set_t::iterator con_it;
     // for (con_it = m_connections.begin(); con_it != m_connections.end(); ++con_it)
     //     m_server.send(*con_it, message);
 
-    if (res.substr(1) == "clients")
-        for (con_it = m_agents.begin(); con_it != m_agents.end(); ++con_it)
-            m_server.send(*con_it, message);
-    else if (res.substr(1) == "agents")
-        for (con_it = m_clients.begin(); con_it != m_clients.end(); ++con_it)
-            m_server.send(*con_it, message);
+    nlohmann::json payload = nlohmann::json::parse(message->get_payload());
 
-    H_DEBUG("[MESSAGE] host => [{}] channel => [{}] message => [{}]", con->get_host(), res.substr(1), message->get_payload());
+    std::string message_type = "invalid";
+
+    try
+    {
+        message_type = payload.at("message_type").get<std::string>();
+    }
+    catch (const std::exception &e)
+    {
+        H_ERROR("[MESSAGE] [MISSING_MESSAGE_TYPE] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+    }
+
+    if (res.substr(1) == "clients")
+        handle_client_message(message_type, handle, message->get_payload());
+    else if (res.substr(1) == "agents")
+        handle_agent_message(message_type, handle, message->get_payload());
+
+    // if (res.substr(1) == "clients")
+    //     for (con_it = m_agents.begin(); con_it != m_agents.end(); ++con_it)
+    //         m_server.send(*con_it, message);
+    // else if (res.substr(1) == "agents")
+    //     for (con_it = m_clients.begin(); con_it != m_clients.end(); ++con_it)
+    //         m_server.send(*con_it, message);
+
+    // H_DEBUG("[MESSAGE] host => [{}] channel => [{}] message => [{}]", con->get_host(), res.substr(1), message->get_payload());
+}
+
+void Middleware::on_client_auth(con_hdl_t handle, std::string payload)
+{
+    uint32_t guid = m_next_guid++;
+
+    server_t::connection_ptr con = m_server.get_con_from_hdl(handle);
+    std::string res = con->get_resource();
+
+    con_metadata_t::ptr metadata(new con_metadata_t("open", false, "no_name", guid, handle));
+    m_clients_metadata[guid] = metadata;
+    H_DEBUG("[CLIENT] [AUTH] host => [{}] channel => [{}] => [{}]", con->get_host(), res.substr(1), nlohmann::json({{"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump());
+    m_server.send(handle, nlohmann::json({{"message_type", "ready"}, {"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump(), websocketpp::frame::opcode::text);
+}
+
+void Middleware::on_agent_auth(con_hdl_t handle, std::string payload)
+{
+    uint32_t guid = m_next_guid++;
+
+    server_t::connection_ptr con = m_server.get_con_from_hdl(handle);
+    std::string res = con->get_resource();
+
+    con_metadata_t::ptr metadata(new con_metadata_t("open", false, "no_name", guid, handle));
+    m_agents_metadata[guid] = metadata;
+    H_DEBUG("[AGENT] [AUTH] host => [{}] channel => [{}] => [{}]", con->get_host(), res.substr(1), nlohmann::json({{"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump());
+    m_server.send(handle, nlohmann::json({{"message_type", "ready"}, {"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump(), websocketpp::frame::opcode::text);
+}
+
+void Middleware::on_client_ready(con_hdl_t handle, std::string payload)
+{
+    server_t::connection_ptr con = m_server.get_con_from_hdl(handle);
+    std::string res = con->get_resource();
+
+    uint32_t guid = 0;
+    std::string name = "invalid";
+    bool state = false;
+
+    nlohmann::json payload_json = nlohmann::json::parse(payload);
+
+    try
+    {
+        guid = payload_json.at("guid").get<uint32_t>();
+        name = payload_json.at("name").get<std::string>();
+        state = payload_json.at("state").get<bool>();
+    }
+    catch (const std::exception &e)
+    {
+        H_ERROR("[CLIENT] [READY] [MISSING_GUID] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+        return;
+    }
+
+    con_metadata_t::ptr metadata = m_clients_metadata[guid];
+
+    if (!metadata || metadata->status != "open")
+    {
+        H_ERROR("[AGENT] [READY] [NOT_AUTHORIZED] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+        return;
+    }
+
+    metadata->status = "ready";
+    metadata->state = state;
+    metadata->name = name;
+    H_DEBUG("[CLIENT] [READY] host => [{}] channel => [{}] => [{}]", con->get_host(), res.substr(1), nlohmann::json({{"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump());
+    m_server.send(handle, nlohmann::json({{"message_type", "ready"}, {"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump(), websocketpp::frame::opcode::text);
+}
+
+void Middleware::on_agent_ready(con_hdl_t handle, std::string payload)
+{
+    server_t::connection_ptr con = m_server.get_con_from_hdl(handle);
+    std::string res = con->get_resource();
+
+    uint32_t guid = 0;
+    std::string name = "invalid";
+    bool state = false;
+
+    nlohmann::json payload_json = nlohmann::json::parse(payload);
+
+    try
+    {
+        guid = payload_json.at("guid").get<uint32_t>();
+        name = payload_json.at("name").get<std::string>();
+        state = payload_json.at("state").get<bool>();
+    }
+    catch (const std::exception &e)
+    {
+        H_ERROR("[AGENT] [READY] [MISSING_GUID] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+        return;
+    }
+
+    con_metadata_t::ptr metadata = m_agents_metadata[guid];
+
+    if (!metadata || metadata->status != "open")
+    {
+        H_ERROR("[AGENT] [READY] [NOT_AUTHORIZED] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+        return;
+    }
+
+    metadata->status = "ready";
+    metadata->state = state;
+    metadata->name = name;
+    H_DEBUG("[AGENT] [READY] host => [{}] channel => [{}] => [{}]", con->get_host(), res.substr(1), nlohmann::json({{"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump());
+    m_server.send(handle, nlohmann::json({{"message_type", "ready"}, {"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump(), websocketpp::frame::opcode::text);
+}
+
+void Middleware::handle_client_message(std::string message_type, con_hdl_t handle, std::string payload)
+{
+    if (message_type == "auth")
+        on_client_auth(handle, payload);
+    else if (message_type == "ready")
+        on_client_ready(handle, payload);
+}
+
+void Middleware::handle_agent_message(std::string message_type, con_hdl_t handle, std::string payload)
+{
+    if (message_type == "auth")
+        on_agent_auth(handle, payload);
+    else if (message_type == "ready")
+        on_agent_ready(handle, payload);
 }
