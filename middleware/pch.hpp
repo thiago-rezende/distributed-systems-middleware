@@ -24,7 +24,9 @@
 #endif // WIN32
 
 /* StdLib Stuff */
+#include <set>
 #include <mutex>
+#include <atomic>
 #include <string>
 #include <thread>
 #include <chrono>
@@ -32,6 +34,8 @@
 #include <iostream>
 #include <algorithm>
 #include <filesystem>
+#include <functional>
+#include <condition_variable>
 
 /* Application Config */
 #include "config.h"

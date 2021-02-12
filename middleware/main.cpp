@@ -4,6 +4,19 @@
  *
  */
 
+#include <websocketpp/config/asio_no_tls.hpp>
+#include <websocketpp/server.hpp>
+
+/* Server type shortcut */
+typedef websocketpp::server<websocketpp::config::asio> server_t;
+
+/* Message Handler */
+void on_message(websocketpp::connection_hdl handle, server_t::message_ptr message)
+{
+    H_PROFILE_FUNCTION();
+    std::cout << message->get_payload() << std::endl;
+}
+
 /* Application Entry Point */
 int main()
 {
@@ -12,37 +25,32 @@ int main()
 
     {
         /* Profiles the Main Function */
-        H_PROFILE_FUNCTION();
+        H_PROFILE_SCOPE("Main Scope");
 
         /* Initialize Logger */
         Horus::Logger::init();
 
-        {
-            /* Profiles the Logging ShowCase Scope */
-            H_PROFILE_SCOPE("Logging Showcase");
+        /* Sync */
+        std::atomic<bool> runing = true;
 
-            /* CMake Configured File Defines */
-            H_INFO("PROJECT NAME => {}", PROJECT_NAME);
-            H_INFO("PROJECT VERSION => {}", PROJECT_VERSION);
-            H_INFO("PROJECT DESCRIPTION => {}", PROJECT_DESCRIPTION);
-            H_INFO("PROJECT URL => {}", PROJECT_HOMEPAGE_URL);
+        server_t server;
+        server.set_message_handler(&on_message);
 
-            /* Some Log Utils */
-            H_TRACE("That's a trace!");
-            H_DEBUG("That's a debug.");
-            H_INFO("That's an info.");
-            H_WARN("That's a warning.");
-            H_ERROR("That's an error.");
-            H_CRITICAL("That's a critical.");
-        }
+        server.init_asio();
+        server.listen(9002);
+        server.start_accept();
+
+        std::thread server_thread([&]() { server.run(); });
+
+        std::cin.get();
+
+        server.stop();
+
+        server_thread.join();
     }
 
     /* Ends Profile Session */
     H_PROFILE_END_SESSION();
-
-    /* Assertions Examples */
-    H_ASSERT(true);                                  // Assertion with default message
-    H_ASSERTM(true, "Assertion with {}", "message"); // Assertion with user defined message
 
     return 0;
 }

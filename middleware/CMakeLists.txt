@@ -1,6 +1,8 @@
 # Include dirs
 set(MIDDLEWARE_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${VENDOR}/websocketpp
+    ${VENDOR}/asio/asio/include
 )
 
 # Header files
@@ -37,6 +39,17 @@ endif()
 # Definitions
 target_compile_definitions(middleware
 PUBLIC
+    # Asio
+    ASIO_STANDALONE
+    # WebSocketpp
+    _WEBSOCKETPP_CPP11_FUNCTIONAL_
+    _WEBSOCKETPP_CPP11_SYSTEM_ERROR_
+    _WEBSOCKETPP_CPP11_RANDOM_DEVICE_
+    _WEBSOCKETPP_CPP11_MEMORY_
+    _WEBSOCKETPP_CPP11_STL_
+    # MSVC
+    UNICODE
+    _UNICODE
     # Debug Build
     $<$<CONFIG:Debug>:DEBUG>
     $<$<CONFIG:Debug>:_DEBUG>

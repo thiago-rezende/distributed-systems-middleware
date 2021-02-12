@@ -5,3 +5,9 @@
 [submodule "vendor/catch2"]
 	path = vendor/catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "vendor/websocketpp"]
+	path = vendor/websocketpp
+	url = https://github.com/zaphoyd/websocketpp.git
+[submodule "vendor/asio"]
+	path = vendor/asio
+	url = https://github.com/chriskohlhoff/asio.git

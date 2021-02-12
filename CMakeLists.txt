@@ -53,6 +53,9 @@ option(SPDLOG_ENABLE_PCH "Build static or shared library using precompiled heade
 add_subdirectory(${VENDOR}/catch2)
 add_subdirectory(${VENDOR}/spdlog)
 
+# Using Header Only
+# add_subdirectory(${VENDOR}/websocketpp)
+
 # Setting project options
 option(USE_MSVC_DYNAMIC_LINKED_RUNTIME "Uses MSVC dynamic linked runtime" OFF)
 
