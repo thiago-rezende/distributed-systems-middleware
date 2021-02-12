@@ -13,46 +13,64 @@
 
 /* Server type shortcut */
 typedef websocketpp::server<websocketpp::config::asio> server_t;
+typedef std::set<websocketpp::connection_hdl, std::owner_less<websocketpp::connection_hdl>> con_set_t;
 
 /* Handlers */
-void on_open(std::shared_ptr<server_t> server, websocketpp::connection_hdl handle)
+bool validate(std::shared_ptr<server_t> server, websocketpp::connection_hdl handle)
+{
+    server_t::connection_ptr con = server->get_con_from_hdl(handle);
+
+    std::string res = con->get_resource();
+    std::regex channel_regex("(/agents|/clients)", std::regex_constants::ECMAScript);
+
+    if (!std::regex_search(res, channel_regex))
+    {
+        con->set_status(websocketpp::http::status_code::not_acceptable, "invalid channel");
+        H_DEBUG("[HANDSHAKE] [REJECT] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+        return false;
+    }
+
+    H_DEBUG("[HANDSHAKE] [ACCEPT] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+    return true;
+}
+
+void on_open(std::shared_ptr<server_t> server, std::shared_ptr<con_set_t> connections, websocketpp::connection_hdl handle)
 {
     H_PROFILE_FUNCTION();
 
     server_t::connection_ptr con = server->get_con_from_hdl(handle);
     std::string res = con->get_resource();
 
-    std::regex channel_regex("(/\\w+)", std::regex_constants::ECMAScript);
-
-    if (!std::regex_search(res, channel_regex))
-    {
-        con->close(websocketpp::close::status::internal_endpoint_error, "invalid channel string");
-        return;
-    }
+    connections->insert(handle);
 
     H_DEBUG("[CONNECTION] [OPEN] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
 }
 
-void on_close(std::shared_ptr<server_t> server, websocketpp::connection_hdl handle)
+void on_close(std::shared_ptr<server_t> server, std::shared_ptr<con_set_t> connections, websocketpp::connection_hdl handle)
 {
     H_PROFILE_FUNCTION();
 
     server_t::connection_ptr con = server->get_con_from_hdl(handle);
     std::string res = con->get_resource();
 
-    std::regex channel_regex("(/\\w+)", std::regex_constants::ECMAScript);
+    connections->erase(handle);
 
     H_DEBUG("[CONNECTION] [CLOSE] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
 }
 
-void on_message(std::shared_ptr<server_t> server, websocketpp::connection_hdl handle, server_t::message_ptr message)
+void on_message(std::shared_ptr<server_t> server, std::shared_ptr<con_set_t> connections, websocketpp::connection_hdl handle, server_t::message_ptr message)
 {
     H_PROFILE_FUNCTION();
 
     server_t::connection_ptr con = server->get_con_from_hdl(handle);
     std::string res = con->get_resource();
 
-    std::regex channel_regex("(/\\w+)", std::regex_constants::ECMAScript);
+    {
+        std::lock_guard<std::mutex> lg(g_connection_lock);
+        con_set_t::iterator con_it;
+        for (con_it = connections->begin(); con_it != connections->end(); ++con_it)
+            server->send(*con_it, message);
+    }
 
     H_DEBUG("[MESSAGE] host => [{}] channel => [{}] message => [{}]", con->get_host(), res.substr(1), message->get_payload());
 }
@@ -91,10 +109,13 @@ int main(int argc, char **argv)
         std::atomic<bool> runing = true;
 
         std::shared_ptr<server_t> server = std::make_shared<server_t>();
+        std::shared_ptr<con_set_t> connections = std::make_shared<con_set_t>();
+
         server->clear_access_channels(websocketpp::log::alevel::all);
-        server->set_open_handler(std::bind(&on_open, server, std::placeholders::_1));
-        server->set_close_handler(std::bind(&on_close, server, std::placeholders::_1));
-        server->set_message_handler(std::bind(&on_message, server, std::placeholders::_1, std::placeholders::_2));
+        server->set_validate_handler(std::bind(&validate, server, std::placeholders::_1));
+        server->set_open_handler(std::bind(&on_open, server, connections, std::placeholders::_1));
+        server->set_close_handler(std::bind(&on_close, server, connections, std::placeholders::_1));
+        server->set_message_handler(std::bind(&on_message, server, connections, std::placeholders::_1, std::placeholders::_2));
 
         H_DEBUG("[SERVER] Initializing");
         server->init_asio();
@@ -108,8 +129,15 @@ int main(int argc, char **argv)
 
         std::cin.get();
 
-        server->stop();
         H_DEBUG("[SERVER] Terminating");
+        server->stop_listening();
+
+        con_set_t::iterator con_it;
+        for (con_it = connections->begin(); con_it != connections->end(); ++con_it)
+        {
+            server->pause_reading(*con_it);
+            server->close(*con_it, websocketpp::close::status::normal, "server closed");
+        }
 
         server_thread.join();
         H_DEBUG("[SERVER] Stopped");
