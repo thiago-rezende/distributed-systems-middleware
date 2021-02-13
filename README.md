@@ -27,10 +27,57 @@
     - [CLI++][clipp-url]
     - [Json][json-url]
 
- ## About the Project
- > TODO
- ## Architecture
- > TODO
+## About the Project
+This project aims to research and study the concept of `middleware` in distributed systems, it is not 100% testing, and may contain several bugs and race conditions.
+
+For security reasons this system will only work on your local machine, as it does not use any type of encryption in communications.
+## Architecture
+This system consists of three distinct parts, which are:
+
+- ** Middleware **: Responsible for receiving and distributing messages
+- ** Agent **: Responsible for reporting your status to middleware
+- ** Client **: Responsible for controlling agents through messages
+
+Each of these components is an executable file that will initialize a logger for displaying messages and a tty to receive user commands
+
+Every time an agent changes state, it communicates with the middleware and the middleware distributes the state of this agent to the other clients
+
+Every time an agent enters the network, the middleware notifies all customers
+
+Whenever a customer changes an agent, the middleware distributes its status over the network.
+
+## In Action
+![Middleware in Action](https://github.com/thiago-rezende/distributed-systems-middleware/raw/master/middleware_in_action.gif)
+
+## Requirements
+  - CMake >= 3.16
+  - Git
+  - C++ 17 Compiler
+## How To Build
+> clone the repo
+```sh
+    git clone --recursive --depth 1 https://github.com/thiago-rezende/distributed-systems-middleware.git
+```
+
+> run cmake
+```sh
+    mkdir build
+    cd build
+    cmake ..
+    cmake --build .
+```
+
+> run the components
+```sh
+    ./bin/middleware --help
+```
+```sh
+    ./bin/agent --help
+```
+```sh
+    ./bin/client --help
+```
+
  ## Project Structure
  ```
     .
