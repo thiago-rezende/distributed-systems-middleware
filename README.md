@@ -54,9 +54,13 @@ Whenever a customer changes an agent, the middleware distributes its status over
   - Git
   - C++ 17 Compiler
 ## How To Build
-> clone the repo
+> clone the repo [with submodules]
 ```sh
     git clone --recursive --depth 1 https://github.com/thiago-rezende/distributed-systems-middleware.git
+
+    # In case of using the source from the zip
+    cd distributed-systems-middleware
+    git submodule update --init
 ```
 
 > run cmake
