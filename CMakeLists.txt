@@ -71,6 +71,7 @@ configure_file(${CMAKE_SOURCE_DIR}/middleware/config.in ${CMAKE_SOURCE_DIR}/midd
 # Setting the project folders
 add_subdirectory(middleware)
 add_subdirectory(agent)
+add_subdirectory(client)
 
 # Adding docs generation
 add_subdirectory(docs)

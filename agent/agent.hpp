@@ -194,6 +194,8 @@ void Agent::on_message(con_hdl_t handle, client_t::message_ptr message)
 
     if (message_type == "ready")
         on_ready(handle, payload);
+    else if (message_type == "update_agent")
+        on_update(handle, payload);
 
     // H_DEBUG("[AGENT] [MESSAGE] host => [{}:{}] channel => [agents] message => [{}]", m_host, m_port, message->get_payload());
 }
@@ -263,15 +265,31 @@ void Agent::on_update(con_hdl_t handle, nlohmann::json payload)
     m_state = state;
     m_name = name;
     H_DEBUG("[CLIENT] [UPDATE] host => [{}:{}] channel => [agents] agent_data => [{}]", m_host, m_port, nlohmann::json({{"status", m_status}, {"state", m_state}, {"name", m_name}, {"guid", guid}}).dump());
-    m_client.send(m_handle, nlohmann::json({{"message_type", "update_agent"}, {"status", m_status}, {"state", m_state}, {"name", m_name}, {"guid", guid}}).dump(), websocketpp::frame::opcode::text);
+    // m_client.send(m_handle, nlohmann::json({{"message_type", "update_agent"}, {"status", m_status}, {"state", m_state}, {"name", m_name}, {"guid", guid}}).dump(), websocketpp::frame::opcode::text);
 }
 
 void Agent::update_name(std::string name)
 {
-    on_update(m_handle, nlohmann::json({{"message_type", "update_agent"}, {"status", m_status}, {"state", m_state}, {"name", name}, {"guid", m_guid}}));
+    if (m_status != "ready")
+    {
+        H_ERROR("[AGENT] [UPDATE] [NOT_AUTHORIZED] host => [{}:{}] channel => [agents]", m_host, m_port);
+        return;
+    }
+
+    H_DEBUG("[CLIENT] [UPDATE] host => [{}:{}] channel => [agents] agent_data => [{}]", m_host, m_port, nlohmann::json({{"status", m_status}, {"state", m_state}, {"name", name}, {"guid", m_guid}}).dump());
+    m_client.send(m_handle, nlohmann::json({{"message_type", "update_agent"}, {"status", m_status}, {"state", m_state}, {"name", name}, {"guid", m_guid}}).dump(), websocketpp::frame::opcode::text);
+    // on_update(m_handle, nlohmann::json({{"message_type", "update_agent"}, {"status", m_status}, {"state", m_state}, {"name", name}, {"guid", m_guid}}));
 }
 
 void Agent::update_state(bool state)
 {
-    on_update(m_handle, nlohmann::json({{"message_type", "update_agent"}, {"status", m_status}, {"state", state}, {"name", m_name}, {"guid", m_guid}}));
+    if (m_status != "ready")
+    {
+        H_ERROR("[AGENT] [UPDATE] [NOT_AUTHORIZED] host => [{}:{}] channel => [agents]", m_host, m_port);
+        return;
+    }
+
+    H_DEBUG("[CLIENT] [UPDATE] host => [{}:{}] channel => [agents] agent_data => [{}]", m_host, m_port, nlohmann::json({{"status", m_status}, {"state", state}, {"name", m_name}, {"guid", m_guid}}).dump());
+    m_client.send(m_handle, nlohmann::json({{"message_type", "update_agent"}, {"status", m_status}, {"state", state}, {"name", m_name}, {"guid", m_guid}}).dump(), websocketpp::frame::opcode::text);
+    // on_update(m_handle, nlohmann::json({{"message_type", "update_agent"}, {"status", m_status}, {"state", state}, {"name", m_name}, {"guid", m_guid}}));
 }

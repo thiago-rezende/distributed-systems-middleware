@@ -73,6 +73,8 @@ public:
 
     /* Update Message Handler */
     void on_update_by_client(con_hdl_t handle, nlohmann::json payload);
+    void on_update_name_by_client(con_hdl_t handle, nlohmann::json payload);
+    void on_update_state_by_client(con_hdl_t handle, nlohmann::json payload);
     void on_update_by_agent(con_hdl_t handle, nlohmann::json payload);
 
     /* Client Message Handler */
@@ -335,11 +337,14 @@ void Middleware::on_client_ready(con_hdl_t handle, nlohmann::json payload)
 
     con_metadata_t::ptr metadata = m_clients_metadata[guid];
 
-    if (!metadata || metadata->status != "open")
+    if (!metadata)
     {
         H_ERROR("[AGENT] [READY] [NOT_AUTHORIZED] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
         return;
     }
+
+    if (metadata->status != "open")
+        return;
 
     metadata->status = "ready";
     metadata->state = state;
@@ -407,7 +412,6 @@ void Middleware::on_update_by_client(con_hdl_t handle, nlohmann::json payload)
 
     try
     {
-        ;
         guid = payload.at("guid").get<uint32_t>();
         name = payload.at("name").get<std::string>();
         status = payload.at("status").get<std::string>();
@@ -436,6 +440,78 @@ void Middleware::on_update_by_client(con_hdl_t handle, nlohmann::json payload)
 
     /* Notify all clients */
     // broadcast_to_clients(nlohmann::json({{"message_type", "new_client"}, {"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump());
+}
+
+void Middleware::on_update_name_by_client(con_hdl_t handle, nlohmann::json payload)
+{
+    server_t::connection_ptr con = m_server.get_con_from_hdl(handle);
+    std::string res = con->get_resource();
+
+    uint32_t guid = 0;
+    std::string name = "invalid";
+
+    try
+    {
+        guid = payload.at("guid").get<uint32_t>();
+        name = payload.at("name").get<std::string>();
+    }
+    catch (const std::exception &e)
+    {
+        H_ERROR("[CLIENT] [READY] [MISSING_NAME|MISSING_GUID] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+        return;
+    }
+
+    con_metadata_t::ptr metadata = m_clients_metadata[guid];
+
+    if (!metadata)
+    {
+        H_ERROR("[CLIENT] [UPDATE] [NOT_AUTHORIZED] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+        return;
+    }
+
+    metadata->name = name;
+    m_clients_metadata[guid] = metadata;
+    H_DEBUG("[CLIENT] [UPDATE] host => [{}] channel => [{}] => [{}]", con->get_host(), res.substr(1), nlohmann::json({{"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump());
+    m_server.send(metadata->handle, nlohmann::json({{"message_type", "update_agent"}, {"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump(), websocketpp::frame::opcode::text);
+
+    /* Notify all clients */
+    // broadcast_to_clients(nlohmann::json({{"message_type", "new_client"}, {"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump());
+}
+
+void Middleware::on_update_state_by_client(con_hdl_t handle, nlohmann::json payload)
+{
+    server_t::connection_ptr con = m_server.get_con_from_hdl(handle);
+    std::string res = con->get_resource();
+
+    uint32_t guid = 0;
+    bool state = false;
+
+    try
+    {
+        guid = payload.at("guid").get<uint32_t>();
+        state = payload.at("state").get<bool>();
+    }
+    catch (const std::exception &e)
+    {
+        H_ERROR("[CLIENT] [READY] [MISSING_NAME|MISSING_GUID] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+        return;
+    }
+
+    con_metadata_t::ptr metadata = m_clients_metadata[guid];
+
+    if (!metadata)
+    {
+        H_ERROR("[CLIENT] [UPDATE] [NOT_AUTHORIZED] host => [{}] channel => [{}]", con->get_host(), res.substr(1));
+        return;
+    }
+
+    metadata->state = state;
+    m_clients_metadata[guid] = metadata;
+    H_DEBUG("[CLIENT] [UPDATE] host => [{}] channel => [{}] => [{}]", con->get_host(), res.substr(1), nlohmann::json({{"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump());
+    m_server.send(metadata->handle, nlohmann::json({{"message_type", "update_agent"}, {"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump(), websocketpp::frame::opcode::text);
+
+    /* Notify all clients */
+    // broadcast_to_clients(nlohmann::json({{"message_type", "update_agent"}, {"status", metadata->status}, {"state", metadata->state}, {"name", metadata->name}, {"guid", guid}}).dump());
 }
 
 void Middleware::on_update_by_agent(con_hdl_t handle, nlohmann::json payload)
@@ -488,6 +564,10 @@ void Middleware::handle_client_message(std::string message_type, con_hdl_t handl
         on_client_ready(handle, payload);
     else if (message_type == "update_agent")
         on_update_by_client(handle, payload);
+    else if (message_type == "update_agent_name")
+        on_update_name_by_client(handle, payload);
+    else if (message_type == "update_agent_state")
+        on_update_state_by_client(handle, payload);
 }
 
 void Middleware::handle_agent_message(std::string message_type, con_hdl_t handle, nlohmann::json payload)

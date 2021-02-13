@@ -22,31 +22,29 @@
  - Libraries Included
     - [Spdlog][spdlog-url]
     - [Catch2][catch2-url]
+    - [WebSocket++][websocketpp-url]
+    - [Asio][asio-url]
+    - [CLI++][clipp-url]
+    - [Json][json-url]
 
+ ## About the Project
+ > TODO
+ ## Architecture
+ > TODO
  ## Project Structure
  ```
     .
     ├── .github                     # Repository stuff.
     ├── middleware                  # Middleware folder.
-    |    ├── assets                 # Assets folder.
-    |    ├── core                   # Core functionalities folder.
-    |    |    ├── logger.h          # Logger utils.
-    |    |    └── logger.cpp        # Logger utils implementation.
-    |    ├── debug                  # Debug functionalities folder.
-    |    |    ├── assert.h          # Assertion utils.
-    |    |    └── instrumentor.h    # Profiling utils.
-    |    ├── pch.hpp                # Pre-compiled header.
-    |    ├── config.h               # Populated at config time.
-    |    ├── main.cpp               # Middleware entrypoint.
-    |    └── CMakeLists.txt         # Middleware CMake build script.
-    ├── tests                       # Tests folder.
-    |    ├── middleware             # Middleware tests.
-    |    |    ├── CMakeLists.txt    # Middleware tests CMake script.
-    |    |    └── never_fails.cpp   # Middleware test file.
-    |    └── CMakeLists.txt         # Main CMake tests script.
+    ├── middleware                  # Agent folder.
+    ├── middleware                  # Client folder.
     ├── vendor                      # Third-party packages will be here.
     |    ├── spdlog                 # Fast C++ logging library.
-    |    └── catch2                 # A modern, C++-native, header-only, test framework.
+    |    ├── catch2                 # A modern, C++-native, header-only, test framework.
+    |    ├── websocketpp            # C++ websocket client/server library.
+    |    ├── asio                   # Cross-platform C++ library for network and low-level I/O.
+    |    ├── clipp                  # Command line interfaces for modern C++.
+    |    └── json                   # JSON for Modern C++.
     └── CMakeLists.txt              # Main CMake build script.
 ```
  ## Compatibility
@@ -61,6 +59,11 @@
 [cmake-url]: https://cmake.org/
 [spdlog-url]: https://github.com/gabime/spdlog
 [catch2-url]: https://github.com/catchorg/Catch2
+[websocketpp-url]: https://github.com/zaphoyd/websocketpp
+[asio-url]: https://github.com/chriskohlhoff/asio
+[clipp-url]: https://github.com/muellan/clipp
+[json-url]: https://github.com/nlohmann/json
+
 
 <!-- Badges -->
 [build-status-badge]: https://github.com/thiago-rezende/distributed-systems-middleware/workflows/build/badge.svg
